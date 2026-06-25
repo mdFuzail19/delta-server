@@ -1,0 +1,63 @@
+{
+  "name": "@zepto-labs/delta-server",
+  "version": "1.0.0",
+  "description": "Serverless OTA release management backend for mobile apps — built on AWS Lambda, DynamoDB, S3, and CloudFront",
+  "repository": "https://github.com/zepto-labs/delta-server.git",
+  "author": "Zepto <opensource@zepto.com> (https://github.com/zepto-labs)",
+  "scripts": {
+    "build": "yarn load-env && webpack-cli",
+    "watch": "webpack-cli -w",
+    "dev-setup": "husky init && echo npx lint-staged > .husky/pre-commit && yarn load-env",
+    "prepare": "husky",
+    "load-env": "npx --yes ts-node src/local/generateEnvFile.ts",
+    "load-local-data": "yarn load-env && npx --yes ts-node src/local/populateData.ts",
+    "start": "yarn load-env && sam local start-api --template template.local.yaml --env-vars envlocal.json",
+    "startProd": "sam local start-api --template template.yaml",
+    "deployProd": "sam deploy --no-confirm-changeset  && yarn postDeploy",
+    "postDeploy": "node scripts/postDeploySyncConfig.js",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ]
+  },
+  "license": "MIT",
+  "bugs": {
+      "url": "https://github.com/zepto-labs/delta-server/issues"
+  },
+  "homepage": "https://github.com/zepto-labs/delta-server#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "resolutions": {
+    "fast-xml-parser": "5.9.0",
+    "@smithy/config-resolver": "4.4.17",
+    "uuid": "11.1.1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudfront": "3.872.0",
+    "@aws-sdk/client-dynamodb": "3.872.0",
+    "@aws-sdk/lib-dynamodb": "3.872.0",
+    "@aws-sdk/client-s3": "3.872.0",
+    "chalk": "4.1.2",
+    "lodash.camelcase": "4.3.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.137",
+    "@types/aws-sdk": "2.7.0",
+    "@types/lodash.camelcase": "4.3.9",
+    "@types/node": "20.12.7",
+    "@types/webpack": "5.28.5",
+    "husky": "9.0.11",
+    "lint-staged": "15.2.2",
+    "prettier": "3.2.5",
+    "ts-loader": "9.5.1",
+    "typescript": "5.4.4",
+    "webpack": "5.91.0",
+    "webpack-cli": "5.1.4"
+  }
+}

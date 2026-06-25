@@ -1,0 +1,354 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM Boilerplate Using TypeScript
+
+Globals:
+    Function:
+        CodeUri: './build'
+        Runtime: nodejs20.x
+        Timeout: 300
+Parameters:
+    ServicePrefix:
+        Type: String
+        Default: '<YOUR_SERVICE_PREFIX>'
+        Description: Common prefix for Lambda function names and resource identifiers (e.g. Delta-staging)
+    TableName:
+        Type: String
+        Default: '<YOUR_DYNAMODB_TABLE_NAME>'
+        Description: App Releases DynamoDB Table Name
+    S3BucketName:
+        Type: String
+        Default: '<YOUR_S3_BUCKET_NAME>'
+        Description: Globally unique S3 bucket name
+    CloudFrontIDS:
+        Type: String
+        Default: '<YOUR_CLOUDFRONT_DISTRIBUTION_ID>'
+        Description: CloudFront Distribution ID — populate after first deploy
+    DeltaCloudFrontURL:
+        Type: String
+        Default: '<YOUR_CLOUDFRONT_URL>'
+        Description: CloudFront Domain URL — populate after first deploy (e.g. https://xxxx.cloudfront.net/)
+    ENVIRONMENT:
+        Type: String
+        Default: 'prod'
+        Description: Deployment environment name
+Resources:
+    DeltaAPIGateway:
+        Type: AWS::Serverless::Api
+        Properties:
+            StageName: Prod
+    S3Bucket:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        UpdateReplacePolicy: Retain
+        Properties:
+            BucketName: !Ref S3BucketName
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                IgnorePublicAcls: true
+                BlockPublicPolicy: true
+                RestrictPublicBuckets: true
+    # Origin Access Control — lets CloudFront fetch from the private S3 bucket using SigV4
+    DeltaCloudFrontOAC:
+        Type: AWS::CloudFront::OriginAccessControl
+        Properties:
+            OriginAccessControlConfig:
+                Name: !Sub '${ServicePrefix}-s3-oac'
+                Description: !Sub 'OAC for ${ServicePrefix} S3 bucket'
+                OriginAccessControlOriginType: s3
+                SigningBehavior: always
+                SigningProtocol: sigv4
+
+    # CloudFront distribution — S3Bucket is the default origin
+    DeltaCloudFront:
+        Type: AWS::CloudFront::Distribution
+        DependsOn: S3Bucket
+        Properties:
+            DistributionConfig:
+                Comment: !Sub '${ServicePrefix}-cloudfront'
+                Enabled: true
+                PriceClass: PriceClass_All
+                Origins:
+                    - Id: DeltaS3Origin
+                      DomainName: !GetAtt S3Bucket.RegionalDomainName
+                      OriginAccessControlId: !Ref DeltaCloudFrontOAC
+                      S3OriginConfig:
+                          # Empty string required when using OAC instead of legacy OAI
+                          OriginAccessIdentity: ''
+                    - Id: DeltaApiGatewayOrigin
+                      DomainName: !Sub '${DeltaAPIGateway}.execute-api.${AWS::Region}.amazonaws.com'
+                      CustomOriginConfig:
+                          HTTPSPort: 443
+                          OriginProtocolPolicy: https-only
+                          OriginSSLProtocols: [TLSv1.2]
+                DefaultCacheBehavior:
+                    TargetOriginId: DeltaS3Origin
+                    AllowedMethods: [GET, HEAD, OPTIONS]
+                    CachedMethods: [GET, HEAD]
+                    ViewerProtocolPolicy: redirect-to-https
+                    Compress: true
+                    # AWS-managed CachingOptimized policy (suitable for S3 assets)
+                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+                CacheBehaviors:
+                    - PathPattern: '/Prod/*api/*'
+                      TargetOriginId: DeltaApiGatewayOrigin
+                      AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+                      CachedMethods: [GET, HEAD]
+                      ViewerProtocolPolicy: https-only
+                      Compress: true
+                      # ForwardedValues is used here (not CachePolicyId) so we can whitelist
+                      # specific query strings as cache keys for the API Gateway origin
+                      ForwardedValues:
+                          QueryString: true
+                          QueryStringCacheKeys:
+                              - appId
+                              - bucket
+                              - bundleVersion
+                              - iu
+                              - jsVersion
+                              - is
+                      MinTTL: 60
+                      DefaultTTL: 604800   # 7 days
+                      MaxTTL: 31536000     # 1 year
+                ViewerCertificate:
+                    # Default *.cloudfront.net cert — no ACM / custom domain required
+                    CloudFrontDefaultCertificate: true
+
+    # Bucket policy — grants CloudFront OAC service principal read access to S3Bucket
+    S3BucketPolicy:
+        Type: AWS::S3::BucketPolicy
+        Properties:
+            Bucket: !Ref S3Bucket
+            PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - Sid: AllowCloudFrontServicePrincipal
+                      Effect: Allow
+                      Principal:
+                          Service: cloudfront.amazonaws.com
+                      Action: s3:GetObject
+                      Resource: !Sub '${S3Bucket.Arn}/*'
+                      Condition:
+                          StringEquals:
+                              AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${DeltaCloudFront}'
+
+    ReleaseTable:
+        Type: AWS::DynamoDB::Table
+        DeletionPolicy: Retain
+        UpdateReplacePolicy: Retain
+        Properties:
+            TableName: !Ref TableName
+            AttributeDefinitions:
+                - AttributeName: AppId
+                  AttributeType: S
+                - AttributeName: ReleaseVersion
+                  AttributeType: S
+            KeySchema:
+                - AttributeName: AppId
+                  KeyType: HASH
+                - AttributeName: ReleaseVersion
+                  KeyType: RANGE
+            BillingMode: PROVISIONED
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+
+    CheckUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: checkUpdate.handler
+            FunctionName: !Sub '${ServicePrefix}-CheckUpdateFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - S3CrudPolicy:
+                      BucketName: !Ref S3BucketName
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                CheckUpdate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/check_update
+                        Method: get
+                        RestApiId:
+                            Ref: DeltaAPIGateway
+    GetRegistryListFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getRegistry.handler
+            FunctionName: !Sub '${ServicePrefix}-GetRegistryListFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    GetReleaseListFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getReleaseList.handler
+            FunctionName: !Sub '${ServicePrefix}-GetReleaseListFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    GetReleaseLatestPatchFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getReleaseLatestBundle.handler
+            FunctionName: !Sub '${ServicePrefix}-GetReleaseLatestPatchFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - S3CrudPolicy:
+                    BucketName: !Ref S3BucketName
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    PostReleaseUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postUpdateRelease.handler
+            FunctionName: !Sub '${ServicePrefix}-PostReleaseUpdateFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - S3CrudPolicy:
+                      BucketName: !Ref S3BucketName
+                - CloudFrontFullAccess
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    PostReleaseCreateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postCreateRelease.handler
+            FunctionName: !Sub '${ServicePrefix}-PostReleaseCreateFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - S3CrudPolicy:
+                      BucketName: !Ref S3BucketName
+                - CloudFrontFullAccess
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    PostRegistryUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postUpdateRegistry.handler
+            FunctionName: !Sub '${ServicePrefix}-PostRegistryUpdateFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - CloudFrontFullAccess
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    PostRegistryCreateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postCreateRegistry.handler
+            FunctionName: !Sub '${ServicePrefix}-PostRegistryCreateFunction'
+            Policies:
+                - DynamoDBCrudPolicy:
+                      TableName: !Ref TableName
+                - CloudFrontFullAccess
+            Environment:
+                Variables:
+                    TABLE_NAME: !Ref TableName
+                    S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    ENVIRONMENT: !Ref ENVIRONMENT
+    InvalidateCacheFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postInvalidateCache.handler
+            FunctionName: !Sub '${ServicePrefix}-InvalidateCacheFunction'
+            Policies:
+                - CloudFrontFullAccess
+            Environment:
+                Variables:
+                    CLOUDFRONT_ID: !Ref CloudFrontIDS
+                    ENVIRONMENT: !Ref ENVIRONMENT
+Outputs:
+    S3BucketArn:
+        Description: ARN of the S3 bucket
+        Value: !GetAtt S3Bucket.Arn
+    DeltaCloudFrontId:
+        Description: ID of the Delta CloudFront distribution
+        Value: !Ref DeltaCloudFront
+        Export:
+            Name: !Sub '${AWS::StackName}-DeltaCloudFrontId'
+    DeltaCloudFrontDomainName:
+        Description: Domain name of the Delta CloudFront distribution
+        Value: !Sub 'https://${DeltaCloudFront.DomainName}/'
+        Export:
+            Name: !Sub '${AWS::StackName}-DeltaCloudFrontDomainName'
+    DeltaRestApiId:
+        Description: REST API Gateway ID — use as ApiGatewayIdss parameter on next deploy to activate the CF API origin
+        Value: !Ref DeltaAPIGateway
+        Export:
+            Name: !Sub '${AWS::StackName}-DeltaRestApiId'
+    S3Bucket:
+        Description: S3 bucket name
+        Value: !Ref S3Bucket
+    S3Region:
+        Description: S3 bucket region
+        Value: !Sub '${AWS::Region}'
+    LambdaRegion:
+        Description: Lambda region
+        Value: !Sub '${AWS::Region}'
+    GetLatestPatchFunction:
+        Description: GetReleaseLatestPatchFunction Lambda name
+        Value: !Ref GetReleaseLatestPatchFunction
+    GetReleaseListFunction:
+        Description: GetReleaseListFunction Lambda name
+        Value: !Ref GetReleaseListFunction
+    CreateReleaseFunction:
+        Description: PostReleaseCreateFunction Lambda name
+        Value: !Ref PostReleaseCreateFunction
+    UpdateReleaseFunction:
+        Description: PostReleaseUpdateFunction Lambda name
+        Value: !Ref PostReleaseUpdateFunction
+    GetRegistryListFunction:
+        Description: GetRegistryListFunction Lambda name
+        Value: !Ref GetRegistryListFunction
+    CreateRegistryFunction:
+        Description: PostRegistryCreateFunction Lambda name
+        Value: !Ref PostRegistryCreateFunction
+    InvalidateCacheFunction:
+        Description: InvalidateCacheFunction Lambda name
+        Value: !Ref InvalidateCacheFunction

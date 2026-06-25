@@ -1,0 +1,11 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "YOUR_STACK_NAME"
+resolve_s3 = true
+s3_prefix = "YOUR_STACK_NAME"
+region = "YOUR_REGION"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = "ENVIRONMENT=\"<YOUR_ENV>\" CloudFrontIDS=\"<YOUR_CLOUDFRONT_ID>\" DeltaCloudFrontURL=\"<YOUR_CLOUDFRONT_URL>\""
+image_repositories = []

@@ -1,0 +1,17 @@
+# Node modules
+/node_modules
+npm-debug.log
+yarn-error.log
+
+
+#VsCode config
+/.vscode
+
+#Build files
+/build
+.DS_Store
+
+#Husky
+.husky
+
+envlocal.json

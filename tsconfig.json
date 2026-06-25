@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "alwaysStrict": true,
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "target": "es2019",
+        "resolveJsonModule": true,
+        "esModuleInterop": true
+    }
+}

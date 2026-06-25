@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS SAM Boilerplate Using TypeScript
+
+Globals:
+    Function:
+        CodeUri: './build'
+        Runtime: nodejs20.x
+        Timeout: 300
+
+Parameters:
+    ENVIRONMENT:
+        Type: String
+        Default: 'development'
+        Description: Check for execution environment
+    S3Url:
+        Type: String
+        Default: ''
+        Description: QA S3 Url
+    S3UrlForConfigNew:
+        Type: String
+        Default: ''
+        Description: QA S3 Url for config files
+
+Resources:
+    CheckUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: checkUpdate.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                CheckUpdate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/check_update
+                        Method: get
+    GetRegistryListFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getRegistry.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                GetRegistryList:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/registry/list
+                        Method: get
+    GetReleaseListFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getReleaseList.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                GetRegistryList:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/release/list
+                        Method: get
+    GetReleaseLatestPatchFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: getReleaseLatestBundle.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                GetReleaseLatestPatch:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/release/latest_bundle
+                        Method: get
+    PostReleaseUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postUpdateRelease.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                PostReleaseUpdate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/release/update
+                        Method: post
+    PostReleaseCreateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postCreateRelease.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                PostReleaseCreate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/release/create
+                        Method: post
+    PostRegistryUpdateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postUpdateRegistry.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                PostReleaseUpdate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/registry/update
+                        Method: post
+    PostRegistryCreateFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: postCreateRegistry.handler
+            Environment:
+                Variables:
+                    ENVIRONMENT: !Ref ENVIRONMENT
+            Events:
+                PostReleaseCreate:
+                    Type: Api
+                    Properties:
+                        Path: /api/v1/registry/create
+                        Method: post
