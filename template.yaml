@@ -10,23 +10,23 @@ Globals:
 Parameters:
     ServicePrefix:
         Type: String
-        Default: '<YOUR_SERVICE_PREFIX>'
+        Default: 'delta-prod'
         Description: Common prefix for Lambda function names and resource identifiers (e.g. Delta-staging)
     TableName:
         Type: String
-        Default: '<YOUR_DYNAMODB_TABLE_NAME>'
+        Default: 'prod_delta_releases'
         Description: App Releases DynamoDB Table Name
     S3BucketName:
         Type: String
-        Default: '<YOUR_S3_BUCKET_NAME>'
+        Default: 'app-ota-release'
         Description: Globally unique S3 bucket name
     CloudFrontIDS:
         Type: String
-        Default: '<YOUR_CLOUDFRONT_DISTRIBUTION_ID>'
+        Default: ''
         Description: CloudFront Distribution ID — populate after first deploy
     DeltaCloudFrontURL:
         Type: String
-        Default: '<YOUR_CLOUDFRONT_URL>'
+        Default: ''
         Description: CloudFront Domain URL — populate after first deploy (e.g. https://xxxx.cloudfront.net/)
     ENVIRONMENT:
         Type: String

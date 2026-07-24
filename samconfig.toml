@@ -1,11 +1,11 @@
 version = 0.1
 [default.deploy.parameters]
-stack_name = "YOUR_STACK_NAME"
+stack_name = "delta-app-prod"
 resolve_s3 = true
-s3_prefix = "YOUR_STACK_NAME"
-region = "YOUR_REGION"
+s3_prefix = "delta-app-prod"
+region = "ap-south-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
-parameter_overrides = "ENVIRONMENT=\"<YOUR_ENV>\" CloudFrontIDS=\"<YOUR_CLOUDFRONT_ID>\" DeltaCloudFrontURL=\"<YOUR_CLOUDFRONT_URL>\""
+parameter_overrides = "ENVIRONMENT=\"prod\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
 image_repositories = []
