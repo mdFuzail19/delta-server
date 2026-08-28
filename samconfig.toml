@@ -3,8 +3,9 @@ version = 0.1
 # ─── Production ───────────────────────────────────────────────────────────────
 [default.deploy.parameters]
 stack_name = "delta-app-prod"
-resolve_s3 = true
+# resolve_s3 = true
 s3_prefix = "delta-app-prod"
+s3_bucket = "delta-sam-artifacts-prod"
 region = "ap-south-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
@@ -17,14 +18,15 @@ image_repositories = []
 # ─── Staging ──────────────────────────────────────────────────────────────────
 [staging.deploy.parameters]
 stack_name = "delta-app-staging"
-resolve_s3 = true
+# resolve_s3 = true
+s3_bucket = "delta-sam-artifacts-staging-1"
 s3_prefix = "delta-app-staging"
 region = "ap-south-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
 # After Phase 2 deploy, replace the empty strings with real CloudFront values:
-# parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"XXXXXXXXXX\" DeltaCloudFrontURL=\"https://zzzzzzz.cloudfront.net/\""
-parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
+parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"E1RH96I9ZMR60G\" DeltaCloudFrontURL=\"https://d2clkj3okll6fb.cloudfront.net/\" ApiGatewayIdss=\"r8yu5cvns9\""
+#parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
 image_repositories = []
 

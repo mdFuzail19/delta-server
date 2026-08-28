@@ -19,6 +19,7 @@ type PostUpdateReleaseApiBody = {
     _releaseState?: ReleaseState
     _rollout?: number
     _defaultRelease?: boolean
+    _isMandatory?: boolean
     _description?: string
 }
 
@@ -167,6 +168,20 @@ const queryUpdateRelease = (params: PostUpdateReleaseApiBody): UpdateCommand => 
         }
     }
 
+    if (!isNullOrUndefined(params._isMandatory)) {
+        updateExpression += ', #IM = :isMandatory'
+
+        attributeNames = {
+            ...attributeNames,
+            '#IM': 'IsMandatory',
+        }
+
+        attributeValues = {
+            ...attributeValues,
+            ':isMandatory': params._isMandatory,
+        }
+    }
+
     if (!isNullOrUndefined(params._description)) {
         updateExpression += ', #DS = :description'
 
@@ -206,6 +221,7 @@ const parseBody = (requestBody: string | null): PostUpdateReleaseApiBody => {
     let _releaseState = parseInt(body['releaseState'], 10)
     let _rollout = parseInt(body['rollout'], 10)
     let _defaultRelease = body['defaultRelease']
+    let _isMandatory = body['isMandatory']
     let _description = body['description']
 
     if (!appId || typeof appId !== 'string') {
@@ -240,6 +256,7 @@ const parseBody = (requestBody: string | null): PostUpdateReleaseApiBody => {
         _releaseState === undefined &&
         _rollout === undefined &&
         _defaultRelease === undefined &&
+        _isMandatory === undefined &&
         _description === undefined
     ) {
         throw new Error(`No param for update provided`)
@@ -247,6 +264,10 @@ const parseBody = (requestBody: string | null): PostUpdateReleaseApiBody => {
 
     if (_defaultRelease && typeof _defaultRelease !== 'boolean') {
         throw new Error(`Invalid defaultRelease type`)
+    }
+
+    if (_isMandatory !== undefined && typeof _isMandatory !== 'boolean') {
+        throw new Error(`Invalid isMandatory type`)
     }
 
     if (_description && typeof _description !== 'string') {
@@ -260,6 +281,7 @@ const parseBody = (requestBody: string | null): PostUpdateReleaseApiBody => {
         _releaseState,
         _rollout,
         _defaultRelease,
+        _isMandatory,
         _description,
     }
 }

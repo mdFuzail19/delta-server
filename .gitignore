@@ -3,16 +3,37 @@
 npm-debug.log
 yarn-error.log
 
-
-#VsCode config
+# VsCode config
 /.vscode
 
-#Build files
+# Webpack build output
 /build
+
+# macOS
 .DS_Store
 
-#Husky
+# Husky
 .husky
 
+# SAM local build cache
+/.aws-sam
+
+# Local environment config (contains IP/credentials)
 envlocal.json
+
+# Auto-generated after deploy — contains real Lambda names + S3 details
+delta.config.json
+
+# Per-release config — contains real hashes, S3 URLs, bundle versions
+release.config.json
+
+# Misc local files
+.codegraph
+commands.md
 DEPLOYMENT.MD
+
+# Temp Lambda payload/response files
+/tmp/delta_payload_*.json
+/tmp/delta_response_*.json
+
+RELEASE.md

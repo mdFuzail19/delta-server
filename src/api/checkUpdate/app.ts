@@ -53,11 +53,16 @@ const checkUpdate = async (event: APIGatewayProxyEvent) => {
     // Check if we have a patchUrl avaiable
     const patchUrl = getPatchUrl(item, queryParams._bundleVersion)
 
+    // An update is mandatory if any of the available update releases (BundleVersion > current) is marked mandatory
+    const isMandatory = items
+        .filter((it) => it.BundleVersion > queryParams._bundleVersion)
+        .some((it) => it.IsMandatory === true)
+
     return {
         status: 200,
         data: {
             isUpdateAvailable: true,
-            isMandatory: false, //This feature is not being supported currently but sending default false value for now
+            isMandatory,
             hash: item.Hash,
             jsVersion: item.JsVersion,
             bundleVersion: item.BundleVersion,

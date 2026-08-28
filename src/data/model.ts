@@ -28,6 +28,7 @@ export interface AppReleaseItem {
     AppVersion?: string
     NativeRelease: boolean
     DefaultRelease: boolean
+    IsMandatory: boolean
     Description: string
 }
 

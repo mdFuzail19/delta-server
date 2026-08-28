@@ -28,6 +28,7 @@ type PostCreateReleaseApiBody = {
     _releaseState?: ReleaseState
     _appVersion?: string
     _nativeRelease: boolean
+    _isMandatory: boolean
     _description?: string
 }
 
@@ -68,6 +69,7 @@ const postCreateRelease = async (event: APIGatewayProxyEvent) => {
         UpdatedAt: new Date().toISOString(),
         NativeRelease: body._nativeRelease,
         DefaultRelease: false, // By default all releases are create in default as false mode
+        IsMandatory: body._isMandatory,
         Description: body._description || '', // Initialize with empty description
     }
 
@@ -142,6 +144,7 @@ const parseBody = (requestBody: string | null): PostCreateReleaseApiBody => {
     const releaseState = releaseStateValue ? parseInt(releaseStateValue, 10) : undefined
     const appVersion = body['appVersion']
     const nativeRelease = body['nativeRelease']
+    const isMandatory = body['isMandatory']
     const description = body['description']
 
     if (!appId?.trim() || typeof appId !== 'string') {
@@ -191,6 +194,10 @@ const parseBody = (requestBody: string | null): PostCreateReleaseApiBody => {
         throw new Error('nativeRelease should be a boolean')
     }
 
+    if (isMandatory && typeof isMandatory !== 'boolean') {
+        throw new Error('isMandatory should be a boolean')
+    }
+
     return {
         _appId: appId.trim(),
         _jsVersion,
@@ -201,6 +208,7 @@ const parseBody = (requestBody: string | null): PostCreateReleaseApiBody => {
         _releaseState: releaseState,
         _appVersion: appVersion?.trim() || undefined,
         _nativeRelease: nativeRelease ?? false,
+        _isMandatory: isMandatory ?? false,
         _description: description?.trim() || undefined,
     }
 }

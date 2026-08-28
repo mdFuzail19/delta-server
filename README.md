@@ -295,7 +295,8 @@ The primary client-facing endpoint exposed publicly via API Gateway + CloudFront
 | `jsVersion` | number | ✅ | Current JS version on the device |
 | `bundleVersion` | number | ✅ | Current bundle/patch version on the device |
 | `bucket` | number | ✅ | Rollout bucket value (0–100) |
-| `iu` | boolean | ❌ | `true` for internal users — sees LIVE releases, ignores rollout % |
+| `iu` | boolean | ❌ | `true` for internal users — sees STAGING + LIVE releases, ignores rollout % |
+| `is` | boolean | ❌ | Reserved for future use — currently unused by the server |
 
 #### Response
 
@@ -309,7 +310,7 @@ The primary client-facing endpoint exposed publicly via API Gateway + CloudFront
 // Update available
 {
   "isUpdateAvailable": true,
-  "isMandatory": false,
+  "isMandatory": true,   // true if ANY release between current and latest is marked mandatory
   "hash": "abc123",
   "jsVersion": 101,
   "bundleVersion": 5,
@@ -392,6 +393,7 @@ Creates a new release entry. Initial `rollout` is always `0` and `defaultRelease
 | `releaseState` | number | ❌ | Initial state — only `0` (CREATED) or `10` (STAGING). Defaults to `0` |
 | `appVersion` | string | ❌ | Native app version constraint |
 | `nativeRelease` | boolean | ❌ | Whether this is a native release. Defaults to `false` |
+| `isMandatory` | boolean | ❌ | Whether this release is mandatory — clients must apply it immediately. Defaults to `false` |
 | `description` | string | ❌ | Release notes |
 
 #### Response
@@ -420,6 +422,7 @@ Updates an existing release. At least one optional field must be provided. Trigg
 | `releaseState` | number | ❌ | New state — must follow allowed transitions (see [Release States](#release-states)) |
 | `rollout` | number | ❌ | New rollout % (0–100) — can only be **increased** |
 | `defaultRelease` | boolean | ❌ | Mark as default — only valid for native releases with no existing default |
+| `isMandatory` | boolean | ❌ | Set or clear the mandatory flag for this release |
 | `description` | string | ❌ | Updated release notes |
 
 #### Response
@@ -554,6 +557,7 @@ Sort key format: `JJJJ-PP`
 | `AppVersion` | string | Optional native app version constraint |
 | `NativeRelease` | boolean | Whether this is a native release |
 | `DefaultRelease` | boolean | Whether this is the default release |
+| `IsMandatory` | boolean | Whether clients must apply this update immediately (cannot skip) |
 | `Description` | string | Release notes |
 | `CreatedAt` | string | ISO timestamp |
 | `UpdatedAt` | string | ISO timestamp |
@@ -615,6 +619,7 @@ The file exports two arrays you can freely edit before running `yarn load-local-
 | `Hash` | Bundle integrity hash |
 | `Patches` | `null` if no patches, or a map of `{ 'Patch-PP-PP': { url, size? } }` entries |
 | `ReleaseState` | `0` = CREATED, `10` = STAGING, `20` = LIVE, `30` = DISABLED |
+| `IsMandatory` | `true` if clients must apply this update immediately, `false` otherwise |
 
 **`sampleAppRegistryData`** — each entry registers an app:
 

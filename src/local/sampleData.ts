@@ -11,6 +11,7 @@ export const sampleAppReleasesData = [
         Hash: 'SOME_SAMPLE_HASH',
         Patches: null,
         ReleaseState: 0,
+        IsMandatory: false,
     },
     {
         AppId: 'sampleAppAndroid',
@@ -24,6 +25,7 @@ export const sampleAppReleasesData = [
         Hash: 'SOME_SAMPLE_HASH',
         Patches: null,
         ReleaseState: 10,
+        IsMandatory: false,
     },
     {
         AppId: 'sampleAppAndroid',
@@ -41,6 +43,7 @@ export const sampleAppReleasesData = [
             },
         },
         ReleaseState: 20,
+        IsMandatory: true, // Example: this patch is mandatory — clients must apply it
     },
     {
         AppId: 'sampleAppAndroid',
@@ -63,6 +66,7 @@ export const sampleAppReleasesData = [
             },
         },
         ReleaseState: 10,
+        IsMandatory: false,
     },
     {
         AppId: 'sampleAppIos',
@@ -76,6 +80,7 @@ export const sampleAppReleasesData = [
         Hash: 'SOME_SAMPLE_HASH',
         Patches: null,
         ReleaseState: 0,
+        IsMandatory: false,
     },
 ]
 

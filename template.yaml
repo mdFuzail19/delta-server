@@ -36,18 +36,18 @@ Resources:
     DeltaAPIGateway:
         Type: AWS::Serverless::Api
         Properties:
-            StageName: Prod
-    S3Bucket:
-        Type: AWS::S3::Bucket
-        DeletionPolicy: Retain
-        UpdateReplacePolicy: Retain
-        Properties:
-            BucketName: !Ref S3BucketName
-            PublicAccessBlockConfiguration:
-                BlockPublicAcls: true
-                IgnorePublicAcls: true
-                BlockPublicPolicy: true
-                RestrictPublicBuckets: true
+            StageName: !Ref ENVIRONMENT
+    # S3Bucket:
+    #     Type: AWS::S3::Bucket
+    #     DeletionPolicy: Retain
+    #     UpdateReplacePolicy: Retain
+    #     Properties:
+    #         BucketName: !Ref S3BucketName
+    #         PublicAccessBlockConfiguration:
+    #             BlockPublicAcls: true
+    #             IgnorePublicAcls: true
+    #             BlockPublicPolicy: true
+    #             RestrictPublicBuckets: true
     # Origin Access Control — lets CloudFront fetch from the private S3 bucket using SigV4
     DeltaCloudFrontOAC:
         Type: AWS::CloudFront::OriginAccessControl
@@ -62,7 +62,7 @@ Resources:
     # CloudFront distribution — S3Bucket is the default origin
     DeltaCloudFront:
         Type: AWS::CloudFront::Distribution
-        DependsOn: S3Bucket
+# DependsOn: S3Bucket        
         Properties:
             DistributionConfig:
                 Comment: !Sub '${ServicePrefix}-cloudfront'
@@ -70,7 +70,7 @@ Resources:
                 PriceClass: PriceClass_All
                 Origins:
                     - Id: DeltaS3Origin
-                      DomainName: !GetAtt S3Bucket.RegionalDomainName
+                      DomainName: !Sub '${S3BucketName}.s3.${AWS::Region}.amazonaws.com'
                       OriginAccessControlId: !Ref DeltaCloudFrontOAC
                       S3OriginConfig:
                           # Empty string required when using OAC instead of legacy OAI
@@ -115,22 +115,22 @@ Resources:
                     CloudFrontDefaultCertificate: true
 
     # Bucket policy — grants CloudFront OAC service principal read access to S3Bucket
-    S3BucketPolicy:
-        Type: AWS::S3::BucketPolicy
-        Properties:
-            Bucket: !Ref S3Bucket
-            PolicyDocument:
-                Version: '2012-10-17'
-                Statement:
-                    - Sid: AllowCloudFrontServicePrincipal
-                      Effect: Allow
-                      Principal:
-                          Service: cloudfront.amazonaws.com
-                      Action: s3:GetObject
-                      Resource: !Sub '${S3Bucket.Arn}/*'
-                      Condition:
-                          StringEquals:
-                              AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${DeltaCloudFront}'
+    # S3BucketPolicy:
+    #     Type: AWS::S3::BucketPolicy
+    #     Properties:
+    #         Bucket: !Ref S3BucketName
+    #         PolicyDocument:
+    #             Version: '2012-10-17'
+    #             Statement:
+    #                 - Sid: AllowCloudFrontServicePrincipal
+    #                   Effect: Allow
+    #                   Principal:
+    #                       Service: cloudfront.amazonaws.com
+    #                   Action: s3:GetObject
+    #                   Resource: !Sub 'arn:aws:s3:::${S3BucketName}/*'
+    #                   Condition:
+    #                       StringEquals:
+    #                           AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${DeltaCloudFront}'
 
     ReleaseTable:
         Type: AWS::DynamoDB::Table
@@ -148,10 +148,7 @@ Resources:
                   KeyType: HASH
                 - AttributeName: ReleaseVersion
                   KeyType: RANGE
-            BillingMode: PROVISIONED
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
+            BillingMode: PAY_PER_REQUEST
 
     CheckUpdateFunction:
         Type: AWS::Serverless::Function
@@ -168,7 +165,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
             Events:
                 CheckUpdate:
@@ -191,7 +188,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     GetReleaseListFunction:
         Type: AWS::Serverless::Function
@@ -206,7 +203,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     GetReleaseLatestPatchFunction:
         Type: AWS::Serverless::Function
@@ -223,7 +220,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     PostReleaseUpdateFunction:
         Type: AWS::Serverless::Function
@@ -258,7 +255,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     PostRegistryUpdateFunction:
         Type: AWS::Serverless::Function
@@ -274,7 +271,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     PostRegistryCreateFunction:
         Type: AWS::Serverless::Function
@@ -290,7 +287,7 @@ Resources:
                     TABLE_NAME: !Ref TableName
                     S3_URL: !Sub 'https://${S3BucketName}.s3.${AWS::Region}.amazonaws.com/'
                     CLOUDFRONT_ID: !Ref CloudFrontIDS
-                    Delta_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
+                    DELTA_CLOUDFRONT_URL: !Ref DeltaCloudFrontURL
                     ENVIRONMENT: !Ref ENVIRONMENT
     InvalidateCacheFunction:
         Type: AWS::Serverless::Function
@@ -306,7 +303,7 @@ Resources:
 Outputs:
     S3BucketArn:
         Description: ARN of the S3 bucket
-        Value: !GetAtt S3Bucket.Arn
+        Value: !Sub 'arn:aws:s3:::${S3BucketName}'
     DeltaCloudFrontId:
         Description: ID of the Delta CloudFront distribution
         Value: !Ref DeltaCloudFront
@@ -324,7 +321,7 @@ Outputs:
             Name: !Sub '${AWS::StackName}-DeltaRestApiId'
     S3Bucket:
         Description: S3 bucket name
-        Value: !Ref S3Bucket
+        Value: !Ref S3BucketName
     S3Region:
         Description: S3 bucket region
         Value: !Sub '${AWS::Region}'
