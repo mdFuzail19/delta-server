@@ -25,8 +25,7 @@ region = "ap-south-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
-# After Phase 2 deploy, replace the empty strings with real CloudFront values:
-parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"E1RH96I9ZMR60G\" DeltaCloudFrontURL=\"https://d2clkj3okll6fb.cloudfront.net/\" ApiGatewayIdss=\"r8yu5cvns9\""
+# Phase 2 — CloudFront + API Gateway values populated from stack outputs
 #parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
+parameter_overrides = "ENVIRONMENT=\"staging\" ServicePrefix=\"delta-staging\" TableName=\"staging_delta_releases\" S3BucketName=\"app-ota-release-staging\" CloudFrontIDS=\"E3OJCI7XKYYGEA\" DeltaCloudFrontURL=\"https://d1kvd01i9ysk40.cloudfront.net/\" ApiGatewayIdss=\"ni57ilt93f\""
 image_repositories = []
-
