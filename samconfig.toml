@@ -11,8 +11,8 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
 # After Phase 2 deploy, replace the empty strings with real CloudFront values:
-# parameter_overrides = "ENVIRONMENT=\"prod\" ServicePrefix=\"delta-prod\" TableName=\"prod_delta_releases\" S3BucketName=\"app-ota-release\" CloudFrontIDS=\"XXXXXXXXXX\" DeltaCloudFrontURL=\"https://zzzzzzz.cloudfront.net/\""
-parameter_overrides = "ENVIRONMENT=\"prod\" ServicePrefix=\"delta-prod\" TableName=\"prod_delta_releases\" S3BucketName=\"app-ota-release\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
+parameter_overrides = "ENVIRONMENT=\"Prod\" ServicePrefix=\"delta-prod\" TableName=\"prod_delta_releases\" S3BucketName=\"app-ota-release\" CloudFrontIDS=\"E1AUTHN8OHPKGU\" DeltaCloudFrontURL=\"https://d1gayior9t3avn.cloudfront.net/\""
+#parameter_overrides = "ENVIRONMENT=\"Prod\" ServicePrefix=\"delta-prod\" TableName=\"prod_delta_releases\" S3BucketName=\"app-ota-release\" CloudFrontIDS=\"\" DeltaCloudFrontURL=\"\""
 image_repositories = []
 
 # ─── Staging ──────────────────────────────────────────────────────────────────
